@@ -1,0 +1,94 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: jwt_api_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: jwt_api_db
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: admin123
+      TZ: America/Bogota
+      PGTZ: America/Bogota
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d jwt_api_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - api_network
+
+  redis:
+    image: redis:7-alpine
+    container_name: jwt_api_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - api_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: jwt_api_server
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: jwt_api_db
+      DB_USER: admin
+      DB_PASSWORD: admin123
+      DB_POOL_MIN: 2
+      DB_POOL_MAX: 10
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
+      JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
+      JWT_ACCESS_TOKEN_EXPIRY: 15m
+      JWT_REFRESH_TOKEN_EXPIRY: 604800
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      LOGIN_RATE_LIMIT_MAX: 5
+      CORS_ORIGIN: http://localhost:5173
+      LOG_LEVEL: combined
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - api_network
+
+secrets:
+  jwt_private_key:
+    file: ./keys/private.pem
+  jwt_public_key:
+    file: ./keys/public.pem
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  api_network:
+    driver: bridge
