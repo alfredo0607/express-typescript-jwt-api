@@ -12,13 +12,16 @@ import { setupSwagger } from "./docs/swagger";
 
 const app: express.Application = express();
 
+app.set("trust proxy", 1);
+
 // 1. Security headers
 app.use(helmet());
 
 // 2. CORS
 app.use(
   cors({
-    origin: env.cors.origins,
+    origin: "*",
+    // origin: env.cors.origins,
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   }),
