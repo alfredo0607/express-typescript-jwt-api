@@ -10,8 +10,6 @@ import { router as authRouter } from "./routes/auth.routes";
 import { router as usersRouter } from "./routes/users.routes";
 import { setupSwagger } from "./docs/swagger";
 
-// Create Express application
-
 const app: express.Application = express();
 
 // 1. Security headers
