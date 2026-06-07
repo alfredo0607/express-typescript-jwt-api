@@ -50,14 +50,14 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DB_HOST: postgres
+      DB_HOST: 10.0.1.233
       DB_PORT: 5432
       DB_NAME: jwt_api_db
       DB_USER: admin
       DB_PASSWORD: admin123
       DB_POOL_MIN: 2
       DB_POOL_MAX: 10
-      REDIS_HOST: redis
+      REDIS_HOST: 10.0.1.233
       REDIS_PORT: 6379
       JWT_PRIVATE_KEY_PATH: /run/secrets/jwt_private_key
       JWT_PUBLIC_KEY_PATH: /run/secrets/jwt_public_key
