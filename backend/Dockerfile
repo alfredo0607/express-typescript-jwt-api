@@ -12,7 +12,7 @@ COPY package.json npm-lock.yaml* ./
 RUN npm install --frozen-lockfile
 
 COPY tsconfig.json ./
-COPY keys ./
+COPY keys/ ./keys/
 COPY src/ ./src/
 RUN npm run build
 
@@ -29,7 +29,7 @@ WORKDIR /app
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/keys ./
+COPY --from=builder /app/keys ./keys
 
 USER app
 
