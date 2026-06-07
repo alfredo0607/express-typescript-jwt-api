@@ -10,6 +10,7 @@ export function authenticate(
   next: NextFunction,
 ): void {
   const authHeader = req.headers.authorization;
+
   if (!authHeader?.startsWith("Bearer ")) {
     throw AppError.unauthorized("Missing or invalid Authorization header");
   }
@@ -20,7 +21,9 @@ export function authenticate(
     const payload = jwt.verify(token, getPublicKey(), {
       algorithms: ["RS256"],
     }) as JwtPayload;
+
     req.user = { id: payload.sub, roles: payload.roles } satisfies AuthUser;
+
     next();
   } catch {
     throw AppError.unauthorized("Invalid or expired token");

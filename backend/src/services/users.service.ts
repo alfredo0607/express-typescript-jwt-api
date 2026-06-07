@@ -5,8 +5,11 @@ import type { AuthUser } from "../types";
 
 export async function getProfile(userId: string) {
   const user = await userRepo.findById(userId);
+
   if (!user) throw AppError.notFound("User not found");
+
   const { password_hash: _, ...publicUser } = user;
+
   return publicUser;
 }
 
@@ -26,14 +29,17 @@ export async function updateUser(
 
   if (dto.email) {
     const existing = await userRepo.findByEmail(dto.email);
+
     if (existing && existing.id !== targetId)
       throw AppError.conflict("Email already in use");
   }
 
   const updated = await userRepo.update(targetId, dto);
+
   if (!updated) throw AppError.notFound("User not found");
 
   const { password_hash: _, ...publicUser } = updated;
+
   return publicUser;
 }
 

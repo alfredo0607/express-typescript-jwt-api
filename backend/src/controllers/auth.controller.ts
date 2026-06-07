@@ -9,6 +9,7 @@ export async function register(
 ): Promise<void> {
   try {
     const result = await authService.register(req.body as RegisterDto);
+
     res.status(201).json({ status: "success", data: result });
   } catch (err) {
     next(err);
@@ -22,6 +23,7 @@ export async function login(
 ): Promise<void> {
   try {
     const result = await authService.login(req.body as LoginDto);
+
     res.json({ status: "success", data: result });
   } catch (err) {
     next(err);
@@ -35,7 +37,9 @@ export async function refresh(
 ): Promise<void> {
   try {
     const { refreshToken } = req.body as RefreshDto;
+
     const result = await authService.refresh(refreshToken);
+
     res.json({ status: "success", data: result });
   } catch (err) {
     next(err);
@@ -49,7 +53,9 @@ export async function logout(
 ): Promise<void> {
   try {
     const { refreshToken } = req.body as RefreshDto;
+
     await authService.logout(refreshToken);
+
     res.json({ status: "success", message: "Logged out successfully" });
   } catch (err) {
     next(err);

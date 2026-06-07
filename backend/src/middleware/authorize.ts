@@ -7,6 +7,7 @@ export function authorize(...roles: UserRole[]) {
     if (!req.user) throw AppError.unauthorized();
 
     const hasRole = req.user.roles.some((r) => roles.includes(r));
+
     if (!hasRole) throw AppError.forbidden();
 
     next();
