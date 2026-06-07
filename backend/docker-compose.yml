@@ -66,7 +66,7 @@ services:
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX_REQUESTS: 100
       LOGIN_RATE_LIMIT_MAX: 5
-      CORS_ORIGIN: https://jwt-auth.alfredo-dominguez.dev,https://www.jwt-auth.alfredo-dominguez.dev
+      CORS_ORIGIN: https://jwt-auth.alfredo-dominguez.dev
       LOG_LEVEL: combined
     secrets:
       - jwt_private_key
