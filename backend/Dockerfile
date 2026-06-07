@@ -5,19 +5,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install --frozen-lockfile
+COPY package.json npm-lock.yaml* ./
+RUN npm install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY src/ ./src/
-RUN pnpm build
+RUN npm run build
 
 # Elimina devDependencies del store
-RUN pnpm prune --prod
+RUN npm prune --prod
 
 # ── Stage 2: imagen final con solo deps de producción ────────────────────────
 FROM node:24-slim AS production
