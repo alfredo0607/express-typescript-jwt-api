@@ -1,109 +1,117 @@
-Problema
+# JWT Auth Full-Stack
 
-Construir una API REST production-ready con autenticación stateless (JWT), control de acceso basado en roles (RBAC), protección contra abuso (rate limiting), validación exhaustiva de inputs, y documentación automática. El deploy debe ser reproducible con Docker y la infraestructura gestionada con Terraform.
+Boilerplate de autenticación production-ready: API REST con Express + TypeScript en el backend, interfaz web con Next.js en el frontend. Implementa JWT RS256 con refresh token rotation, control de acceso basado en roles (RBAC) y rate limiting distribuido con Redis.
 
-Solución
+---
 
-API construida con Express + TypeScript usando una arquitectura en capas (routes → middleware → controllers → services → repositories). JWT para autenticación stateless con refresh token rotation. RBAC con roles definidos en base de datos. Rate limiting por IP y por usuario con Redis. Validación con Zod en cada endpoint. Documentación OpenAPI generada automáticamente. Containerizada con Docker multi-stage y desplegada en EC2 + Docker.
+## El problema que resuelve
 
+Construir autenticación segura desde cero repetidamente es costoso y propenso a errores. Este proyecto centraliza las decisiones de seguridad correctas: tokens asimétricos (RS256), rotación de sesiones, protección contra fuerza bruta, validación exhaustiva de inputs y RBAC; todo en un stack moderno, tipado y listo para producción.
 
- Cliente (React / React Native / Postman)
-     │ HTTPS
-     ▼
-  ┌──────────────────────────────────────────────────────┐
-  │  Express App (TypeScript)                            │
-  │                                                      │
-  │  Request Pipeline:                                   │
-  │  ┌─────────────────────────────────────────────────┐ │
-  │  │ 1. Helmet (security headers)                    │ │
-  │  │ 2. CORS (allow-list de orígenes)               │ │
-  │  │ 3. Rate Limiter (100 req/15min por IP, Redis)  │ │
-  │  │ 4. Body Parser (JSON, max 1MB)                 │ │
-  │  │ 5. Morgan (request logging)                    │ │
-  │  │ 6. authenticate() middleware (JWT verify)      │ │
-  │  │ 7. authorize() middleware (RBAC check)         │ │
-  │  │ 8. validate() middleware (Zod schema)          │ │
-  │  │ 9. Route Handler (Controller)                  │ │
-  │  │ 10. Error Handler global                       │ │
-  │  └─────────────────────────────────────────────────┘ │
-  └────────────────────────┬────────────────────────────┘
-                           │
-         ┌─────────────────┼──────────────────┐
-         ▼                 ▼                  ▼
-  ┌─────────────┐   ┌─────────────┐   ┌────────────────┐
-  │ PostgreSQL  │   │    Redis    │   │  Secrets Mgr   │
-  │ (usuarios,  │   │ (rate limit │   │ (JWT secret,   │
-  │  roles,     │   │  + sessions)│   │  DB password)  │
-  │  recursos)  │   └─────────────┘   └────────────────┘
-  └─────────────┘
+---
 
-  Auth Flow (JWT + Refresh Token):
-  POST /auth/login ──▶ valida credenciales ──▶ genera:
-    • accessToken  (JWT, 15 min, firmado con RS256)
-    • refreshToken (opaque, 7 días, almacenado en Redis)
+## Arquitectura general
 
-  POST /auth/refresh ──▶ valida refreshToken en Redis ──▶ rota:
-    • nuevo accessToken (15 min)
-    • nuevo refreshToken (7 días) + invalida el anterior
+```
+Browser (Next.js 16)
+      │  HTTPS
+      ▼
+Express API (TypeScript)
+  ├── Helmet + CORS
+  ├── Rate Limiting (Redis)
+  ├── JWT RS256 (authenticate)
+  ├── RBAC (authorize)
+  └── Zod (validate)
+      │
+      ├── PostgreSQL  — usuarios, roles, recursos
+      └── Redis       — rate limit counters + refresh tokens
+```
 
+**Auth flow:**
 
-Implementación
-1
-Arquitectura en capas (Layered Architecture)
-La aplicación se divide en: Routes (define endpoints y aplica middleware), Controllers (maneja el request/response, delega lógica), Services (lógica de negocio pura, testeable), Repositories (acceso a datos, abstrae la DB). Esta separación permite testear cada capa de forma independiente con mocks.
+```
+POST /api/auth/login
+  → valida credenciales en PostgreSQL
+  → emite accessToken  (JWT RS256, 15 min)
+  → emite refreshToken (UUID opaque, 7 días, guardado en Redis)
 
-2
-Autenticación JWT con RS256 y Refresh Token Rotation
-Se usa RS256 (asimétrico) en lugar de HS256: la clave privada firma los tokens (solo el servidor), la clave pública verifica (puede distribuirse a otros servicios). Access token: 15 minutos, contiene userId y roles. Refresh token: opaque UUID aleatorio, 7 días, almacenado en Redis con el userId asociado. Refresh token rotation: cada vez que se usa, se invalida y genera uno nuevo.
+POST /api/auth/refresh
+  → verifica refreshToken en Redis
+  → rota: invalida el anterior, emite par nuevo
+```
 
-3
-Control de acceso basado en roles (RBAC)
-Los roles (admin, user, viewer) se almacenan en PostgreSQL y se incluyen en el JWT payload al login. El middleware authorize('admin', 'user') verifica que el rol del token esté en la lista permitida. Para permisos más granulares (ej: solo el dueño del recurso puede editar), se hace una verificación adicional en el Service layer comparando req.user.id con el ownerId del recurso.
+---
 
-4
-Validación con Zod en cada endpoint
-Cada endpoint define un schema Zod para body, params y query. El middleware validate(schema) ejecuta schema.parse() y retorna 400 con los errores de validación si falla. Zod garantiza type safety en runtime, complementando TypeScript que solo opera en compile time.
+## Estructura del repositorio
 
-5
-Rate Limiting con Redis
-express-rate-limit con Redis store (rate-limit-redis). Límites: 100 requests/15min por IP (global), 5 intentos de login/15min por IP (anti-brute-force), 1000 requests/hora por usuario autenticado. Redis persiste los contadores entre restarts del servidor y entre múltiples instancias (crítico en ECS con múltiples tasks).
+```
+.
+├── backend/       API REST — Express 5 + TypeScript + PostgreSQL + Redis
+└── frontend/      Web app — Next.js 16 + React 19 + shadcn/ui
+```
 
-6
-Documentación OpenAPI con Swagger UI
-swagger-jsdoc genera la especificación OpenAPI 3.0 desde JSDoc comments en las routes. swagger-ui-express sirve el UI interactivo en /api/docs. Cada endpoint documenta: descripción, parámetros, request body schema, response schemas (200, 400, 401, 403, 404, 500), y ejemplos.
+Cada carpeta tiene su propio `package.json`, `README.md` y configuración independiente.
 
+---
 
-Tech Stack
-Runtime & Framework
+## Quick start
 
-Node.js LTS
-Express
-TypeScript 
-Autenticación & Seguridad
+### 1. Backend
 
-jsonwebtoken (RS256)
-bcrypt
-helmet
-cors
-express-rate-limit
-Validación & Documentación
+```bash
+cd backend
 
-Zod
-swagger-jsdoc
-swagger-ui-express
-Base de datos
+# Generar claves RSA para JWT RS256
+mkdir keys
+openssl genrsa -out keys/private.pem 2048
+openssl rsa -in keys/private.pem -pubout -out keys/public.pem
 
-PostgreSQL
-node-postgres (pg)
-pg-pool
-Caché & Sessions
+# Variables de entorno
+cp .env.example .env   # editar DB_PASSWORD, etc.
 
-Redis 7
-ioredis
-rate-limit-redis
-Infraestructura
+# Levantar PostgreSQL + Redis con Docker
+docker compose up postgres redis -d
 
-Docker (multi-stage)
-EC2 + Docker
-Terraform
-GitHub Actions
+# Instalar dependencias y correr en modo desarrollo
+pnpm install
+pnpm dev              # http://localhost:3000
+                      # Swagger UI: http://localhost:3000/api/docs
+```
+
+### 2. Frontend
+
+```bash
+cd frontend
+
+pnpm install
+pnpm dev              # http://localhost:3001
+```
+
+---
+
+## Stack
+
+| Capa | Tecnología |
+|---|---|
+| API | Express 5, TypeScript 6, Node.js LTS |
+| Auth | jsonwebtoken RS256, bcrypt, UUID refresh tokens |
+| Validación | Zod v4 (backend), Zod v3 + react-hook-form (frontend) |
+| Base de datos | PostgreSQL 17, pg + pool |
+| Caché / sesiones | Redis 7, ioredis, rate-limit-redis |
+| Docs | OpenAPI 3.0, swagger-jsdoc, swagger-ui-express |
+| UI | Next.js 16, React 19, shadcn/ui, Tailwind CSS v4 |
+| Estado | Zustand v5 (auth store), TanStack Query v5 (server state) |
+| Infraestructura | Docker multi-stage, docker-compose, Cloudflare Pages |
+
+---
+
+## Documentación detallada
+
+- [Backend README](backend/README.md)
+- [Frontend README](frontend/README.md)
+
+---
+
+## Autor
+
+**Ing. Alfredo Dominguez** — [alfredojosedominguezhernandez@gmail.com](mailto:alfredojosedominguezhernandez@gmail.com)  
