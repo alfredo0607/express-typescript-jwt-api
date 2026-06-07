@@ -5,35 +5,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 make g++ \
   && rm -rf /var/lib/apt/lists/*
 
-RUN corepack enable
+RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package.json ./
-RUN pnpm install --no-frozen-lockfile
+COPY package.json pnpm-lock.yaml* ./
+RUN pnpm install --frozen-lockfile
 
 COPY tsconfig.json ./
 COPY src/ ./src/
 RUN pnpm build
 
+# Elimina devDependencies del store
+RUN pnpm prune --prod
+
 # ── Stage 2: imagen final con solo deps de producción ────────────────────────
 FROM node:24-slim AS production
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 make g++ \
-  && rm -rf /var/lib/apt/lists/*
-
-RUN corepack enable && groupadd -r app && useradd -r -g app app
+RUN groupadd -r app && useradd -r -g app app
 
 WORKDIR /app
 
-COPY package.json ./
-RUN pnpm install --no-frozen-lockfile --prod
-
-# Elimina herramientas de build (ya no se necesitan en runtime)
-RUN apt-get purge -y python3 make g++ && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
-
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package.json ./
 
 USER app
 
