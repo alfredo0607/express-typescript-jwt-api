@@ -1,5 +1,6 @@
 import { Router, IRouter } from "express";
 import {
+  createUser,
   getProfile,
   listUsers,
   updateUser,
@@ -8,7 +9,11 @@ import {
 import { authenticate } from "../middleware/authenticate";
 import { authorize } from "../middleware/authorize";
 import { validate } from "../middleware/validate";
-import { updateUserSchema, userIdParamSchema } from "../models/users.schemas";
+import {
+  adminUpdateUserSchema,
+  createUserByAdminSchema,
+  userIdParamSchema,
+} from "../models/users.schemas";
 
 export const router: IRouter = Router();
 
@@ -44,6 +49,37 @@ router.get("/", authorize("admin"), listUsers);
 
 /**
  * @openapi
+ * /api/users:
+ *   post:
+ *     tags: [Users]
+ *     summary: Create a new user (admin only)
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [name, email, password]
+ *             properties:
+ *               name: { type: string }
+ *               email: { type: string, format: email }
+ *               password: { type: string }
+ *               role: { type: string, enum: [admin, user, viewer] }
+ *     responses:
+ *       201:
+ *         description: User created
+ *       409:
+ *         description: Email already in use
+ */
+router.post(
+  "/",
+  authorize("admin"),
+  validate({ body: createUserByAdminSchema }),
+  createUser,
+);
+
+/**
+ * @openapi
  * /api/users/{id}:
  *   patch:
  *     tags: [Users]
@@ -63,7 +99,7 @@ router.get("/", authorize("admin"), listUsers);
  */
 router.patch(
   "/:id",
-  validate({ params: userIdParamSchema, body: updateUserSchema }),
+  validate({ params: userIdParamSchema, body: adminUpdateUserSchema }),
   updateUser,
 );
 

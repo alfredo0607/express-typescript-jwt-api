@@ -10,6 +10,7 @@ async function bootstrap(): Promise<void> {
   const server = app.listen(env.PORT, () => {
     console.log(`✓ Server running on http://localhost:${env.PORT}`);
     console.log(`✓ Docs available at http://localhost:${env.PORT}/api/docs`);
+    console.log(`✓ Cors available at ${env.cors.origins.join(", ")}`);
     console.log(`  Environment: ${env.NODE_ENV}`);
   });
 

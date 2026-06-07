@@ -1,7 +1,20 @@
 import { Request, Response, NextFunction } from "express";
 import * as usersService from "../services/users.service";
-import type { UpdateUserDto } from "../models/users.schemas";
+import type { UpdateUserDto, CreateUserByAdminDto } from "../models/users.schemas";
 import { AppError } from "../utils/AppError";
+
+export async function createUser(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const user = await usersService.createUser(req.body as CreateUserByAdminDto);
+    res.status(201).json({ status: "success", data: user });
+  } catch (err) {
+    next(err);
+  }
+}
 
 export async function getProfile(
   req: Request,

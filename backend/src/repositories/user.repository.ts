@@ -80,31 +80,62 @@ export async function create(data: {
 
 export async function update(
   id: string,
-  data: Partial<Pick<User, "name" | "email">>,
+  data: Partial<Pick<User, "name" | "email" | "is_active"> & { role: UserRole }>,
 ): Promise<User | null> {
-  const fields: string[] = [];
-  const values: unknown[] = [];
-  let idx = 1;
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
 
-  if (data.name !== undefined) {
-    fields.push(`name = $${idx++}`);
-    values.push(data.name);
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+
+    if (data.name !== undefined) { fields.push(`name = $${idx++}`); values.push(data.name); }
+    if (data.email !== undefined) { fields.push(`email = $${idx++}`); values.push(data.email); }
+    if (data.is_active !== undefined) { fields.push(`is_active = $${idx++}`); values.push(data.is_active); }
+
+    if (fields.length > 0) {
+      values.push(id);
+      const { rows } = await client.query<{ id: string }>(
+        `UPDATE users SET ${fields.join(", ")}, updated_at = NOW() WHERE id = $${idx} RETURNING id`,
+        values,
+      );
+      if (!rows[0]) { await client.query("ROLLBACK"); return null; }
+    } else {
+      const { rows } = await client.query<{ id: string }>(
+        `SELECT id FROM users WHERE id = $1`,
+        [id],
+      );
+      if (!rows[0]) { await client.query("ROLLBACK"); return null; }
+    }
+
+    if (data.role !== undefined) {
+      await client.query(`DELETE FROM user_roles WHERE user_id = $1`, [id]);
+      await client.query(
+        `INSERT INTO user_roles (user_id, role_id) SELECT $1, id FROM roles WHERE name = $2`,
+        [id, data.role],
+      );
+    }
+
+    await client.query("COMMIT");
+
+    const { rows } = await client.query<User>(
+      `SELECT u.id, u.name, u.email, u.password_hash, u.is_active, u.created_at, u.updated_at,
+              COALESCE(array_agg(r.name) FILTER (WHERE r.name IS NOT NULL), '{}') AS roles
+       FROM users u
+       LEFT JOIN user_roles ur ON ur.user_id = u.id
+       LEFT JOIN roles r ON r.id = ur.role_id
+       WHERE u.id = $1
+       GROUP BY u.id`,
+      [id],
+    );
+    return rows[0] ?? null;
+  } catch (err) {
+    await client.query("ROLLBACK");
+    throw err;
+  } finally {
+    client.release();
   }
-  if (data.email !== undefined) {
-    fields.push(`email = $${idx++}`);
-    values.push(data.email);
-  }
-
-  if (fields.length === 0) return null;
-
-  values.push(id);
-  const { rows } = await pool.query<User>(
-    `UPDATE users SET ${fields.join(", ")}, updated_at = NOW()
-     WHERE id = $${idx}
-     RETURNING *`,
-    values,
-  );
-  return rows[0] ?? null;
 }
 
 export async function remove(id: string): Promise<boolean> {

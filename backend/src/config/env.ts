@@ -36,12 +36,12 @@ export const env = {
 
   rateLimit: {
     windowMs: parseInt(optionalEnv("RATE_LIMIT_WINDOW_MS", "900000"), 10),
-    maxRequests: parseInt(optionalEnv("RATE_LIMIT_MAX_REQUESTS", "100"), 10),
-    loginMax: parseInt(optionalEnv("LOGIN_RATE_LIMIT_MAX", "5"), 10),
+    maxRequests: parseInt(optionalEnv("RATE_LIMIT_MAX_REQUESTS", "100000"), 10),
+    loginMax: parseInt(optionalEnv("LOGIN_RATE_LIMIT_MAX", "150"), 10),
   },
 
   cors: {
-    origins: optionalEnv("CORS_ORIGIN", "http://localhost:5173").split(","),
+    origins: optionalEnv("CORS_ORIGIN", "http://localhost:3001").split(","),
   },
 
   logLevel: optionalEnv("LOG_LEVEL", "dev"),

@@ -1,6 +1,11 @@
+import bcrypt from "bcrypt";
 import * as userRepo from "../repositories/user.repository";
 import { AppError } from "../utils/AppError";
-import type { UpdateUserDto } from "../models/users.schemas";
+import type {
+  UpdateUserDto,
+  AdminUpdateUserDto,
+  CreateUserByAdminDto,
+} from "../models/users.schemas";
 import type { AuthUser } from "../types";
 
 export async function getProfile(userId: string) {
@@ -17,9 +22,25 @@ export async function listUsers() {
   return userRepo.findAll();
 }
 
+export async function createUser(dto: CreateUserByAdminDto) {
+  const existing = await userRepo.findByEmail(dto.email);
+  if (existing) throw AppError.conflict("Email already in use");
+
+  const passwordHash = await bcrypt.hash(dto.password, 12);
+  const user = await userRepo.create({
+    name: dto.name,
+    email: dto.email,
+    passwordHash,
+    role: dto.role,
+  });
+
+  const { password_hash: _, ...publicUser } = user;
+  return publicUser;
+}
+
 export async function updateUser(
   targetId: string,
-  dto: UpdateUserDto,
+  dto: AdminUpdateUserDto | UpdateUserDto,
   requester: AuthUser,
 ) {
   const isAdmin = requester.roles.includes("admin");
@@ -34,7 +55,15 @@ export async function updateUser(
       throw AppError.conflict("Email already in use");
   }
 
-  const updated = await userRepo.update(targetId, dto);
+  const adminDto = dto as AdminUpdateUserDto;
+  const updated = await userRepo.update(targetId, {
+    name: dto.name,
+    email: dto.email,
+    ...(isAdmin && adminDto.role !== undefined ? { role: adminDto.role } : {}),
+    ...(isAdmin && adminDto.is_active !== undefined
+      ? { is_active: adminDto.is_active }
+      : {}),
+  });
 
   if (!updated) throw AppError.notFound("User not found");
 

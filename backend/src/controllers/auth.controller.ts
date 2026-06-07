@@ -12,6 +12,8 @@ export async function register(
 
     res.status(201).json({ status: "success", data: result });
   } catch (err) {
+    console.log(err);
+
     next(err);
   }
 }
