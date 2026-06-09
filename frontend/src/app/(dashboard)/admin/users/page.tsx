@@ -268,12 +268,12 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold">Gestión de Usuarios</h1>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => refetch()}>
             <RefreshCw className="h-4 w-4 mr-2" />
-            Actualizar
+            <span className="hidden sm:inline">Actualizar</span>
           </Button>
           <Button size="sm" onClick={() => setShowCreate(true)}>
             <UserPlus className="h-4 w-4 mr-2" />
@@ -304,72 +304,81 @@ export default function AdminUsersPage() {
               ))}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nombre</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Roles</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Creado</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users?.map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="font-medium">{u.name}</TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1 flex-wrap">
-                        {u.roles.map((role) => (
-                          <Badge key={role} variant={roleVariant(role)} className="text-xs">
-                            {role}
-                          </Badge>
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={u.is_active ? "default" : "destructive"}
-                        className="text-xs"
-                      >
-                        {u.is_active ? "Activo" : "Inactivo"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(u.created_at).toLocaleDateString("es-MX")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex gap-1 justify-end">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setEditTarget(u)}
-                          title="Editar usuario"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          disabled={u.id === currentUser?.id || deleteMutation.isPending}
-                          onClick={() => deleteMutation.mutate(u.id)}
-                          title={
-                            u.id === currentUser?.id
-                              ? "No puedes eliminarte a ti mismo"
-                              : "Eliminar usuario"
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nombre</TableHead>
+                    <TableHead className="hidden md:table-cell">Email</TableHead>
+                    <TableHead>Roles</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead className="hidden lg:table-cell">Creado</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {users?.map((u) => (
+                    <TableRow key={u.id}>
+                      <TableCell className="font-medium">
+                        <div>
+                          {u.name}
+                          <p className="text-xs text-muted-foreground md:hidden truncate max-w-30">
+                            {u.email}
+                          </p>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground hidden md:table-cell">{u.email}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 flex-wrap">
+                          {u.roles.map((role) => (
+                            <Badge key={role} variant={roleVariant(role)} className="text-xs">
+                              {role}
+                            </Badge>
+                          ))}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={u.is_active ? "default" : "destructive"}
+                          className="text-xs"
+                        >
+                          {u.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm hidden lg:table-cell">
+                        {new Date(u.created_at).toLocaleDateString("es-MX")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setEditTarget(u)}
+                            title="Editar usuario"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            disabled={u.id === currentUser?.id || deleteMutation.isPending}
+                            onClick={() => deleteMutation.mutate(u.id)}
+                            title={
+                              u.id === currentUser?.id
+                                ? "No puedes eliminarte a ti mismo"
+                                : "Eliminar usuario"
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

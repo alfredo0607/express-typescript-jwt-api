@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, User, Users, LogOut, Shield } from "lucide-react";
+import { LayoutDashboard, User, Users, LogOut, Shield, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +17,12 @@ const navItems = [
 
 const adminItems = [{ href: "/admin/users", label: "Usuarios", icon: Users }];
 
-export function Nav() {
+interface NavProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Nav({ isOpen = false, onClose }: NavProps) {
   const pathname = usePathname();
   const { user, isAdmin, logout, isLoggingOut } = useAuth();
 
@@ -29,14 +34,37 @@ export function Nav() {
     .slice(0, 2);
 
   return (
-    <aside
-      className="flex flex-col w-64 min-h-screen p-4"
-      style={{
-        background: "linear-gradient(180deg, #0f0f14 0%, #0c0c10 100%)",
-        borderRight: "1px solid rgba(255,255,255,0.06)",
-        boxShadow: "4px 0 24px -8px rgba(0,0,0,0.6)",
-      }}
-    >
+    <>
+      {/* Overlay móvil */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={onClose}
+        />
+      )}
+
+      <aside
+        className={cn(
+          "flex flex-col w-64 p-4 shrink-0",
+          "fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out",
+          "md:relative md:z-auto md:translate-x-0 md:h-auto md:min-h-screen",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+        )}
+        style={{
+          background: "linear-gradient(180deg, #0f0f14 0%, #0c0c10 100%)",
+          borderRight: "1px solid rgba(255,255,255,0.06)",
+          boxShadow: "4px 0 24px -8px rgba(0,0,0,0.6)",
+        }}
+      >
+      {/* Botón cerrar - solo móvil */}
+      <button
+        className="md:hidden absolute right-3 top-3 text-muted-foreground hover:text-foreground p-1 rounded"
+        onClick={onClose}
+        aria-label="Cerrar menú"
+      >
+        <X className="h-4 w-4" />
+      </button>
+
       {/* Logo */}
       <div className="flex items-center gap-3 mb-8 px-1">
         <div
@@ -61,6 +89,7 @@ export function Nav() {
             <Link
               key={href}
               href={href}
+              onClick={onClose}
               className={cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                 isActive
@@ -100,6 +129,7 @@ export function Nav() {
                 <Link
                   key={href}
                   href={href}
+                  onClick={onClose}
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-150",
                     isActive
@@ -167,5 +197,6 @@ export function Nav() {
         </Button>
       </div>
     </aside>
+    </>
   );
 }
